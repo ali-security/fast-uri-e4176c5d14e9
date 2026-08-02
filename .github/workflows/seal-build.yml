@@ -8,6 +8,8 @@ jobs:
     name: Test compatibility with Node.js 10
     runs-on: ubuntu-latest
     steps:
+      - name: Configure npm time machine registry
+        run: npm config set registry https://:2025-01-20T20%3A22%3A54.617000Z@time-machines-npm.sealsecurity.io/
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -59,6 +61,8 @@ jobs:
           - os: macos-latest
             node-version: 23
     steps:
+      - name: Configure npm time machine registry
+        run: npm config set registry https://:2025-01-20T20%3A22%3A54.617000Z@time-machines-npm.sealsecurity.io/
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -85,6 +89,8 @@ jobs:
       - test-regression-check-node10
       - test
     steps:
+      - name: Configure npm time machine registry
+        run: npm config set registry https://:2025-01-20T20%3A22%3A54.617000Z@time-machines-npm.sealsecurity.io/
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
