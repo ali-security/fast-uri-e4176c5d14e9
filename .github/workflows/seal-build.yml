@@ -1,0 +1,113 @@
+name: seal-build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-regression-check-node10:
+    name: Test compatibility with Node.js 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '10'
+          check-latest: true
+
+      - name: Pin npm registry to the release date
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken=2025-01-20T20:22:54.617000Z
+
+      - name: Install
+        run: |
+          npm install --ignore-scripts
+
+      - name: Copy project as fast-uri to node_node_modules
+        run: |
+          rm -rf ./node_modules/fast-uri/lib &&
+          rm -rf ./node_modules/fast-uri/index.js &&
+          cp -r ./lib ./node_modules/fast-uri/lib &&
+          cp ./index.js ./node_modules/fast-uri/index.js
+
+      - name: Run tests
+        run: |
+          npm run test:unit
+        env:
+          NODE_OPTIONS: no-network-family-autoselection
+
+  test:
+    name: Test Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node-version: 23
+          - os: ubuntu-latest
+            node-version: 22
+          - os: ubuntu-latest
+            node-version: 20
+          - os: ubuntu-latest
+            node-version: 18
+          - os: windows-latest
+            node-version: 23
+          - os: macos-latest
+            node-version: 23
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Pin npm registry to the release date
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken=2025-01-20T20:22:54.617000Z
+
+      - name: Install
+        run: npm install --ignore-scripts
+
+      - name: Run tests
+        run: npm test
+
+  pack:
+    name: Pack npm tarball
+    runs-on: ubuntu-latest
+    needs:
+      - test-regression-check-node10
+      - test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23
+
+      - name: Restore pristine .github so CI-only edits never ship in the tarball
+        run: |
+          rm -rf .github
+          git checkout d40b400b0d13 -- .github
+          git status --porcelain
+
+      - name: Pack
+        run: |
+          npm pack --ignore-scripts
+          ls -l *.tgz
+          tar tzf *.tgz | sort
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball
+          path: fast-uri-*.tgz
+          if-no-files-found: error
